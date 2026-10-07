@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Cart Reset by HyperWumpus",
-  "version": "0.4.0",
-  "description": "Keep the visual reminders. Lose the cart clutter. Group, save for later, and remove Walmart cart items in batches.",
+  "version": "0.5.0",
+  "description": "Group and review Walmart and Costco Same-Day carts; download visual reminders and remove selected items in batches.",
   "permissions": [
     "activeTab",
     "scripting"
@@ -30,7 +30,8 @@
         "assets/cart-reset-background.jpeg"
       ],
       "matches": [
-        "https://www.walmart.com/*"
+        "https://www.walmart.com/*",
+        "https://sameday.costco.com/*"
       ]
     }
   ]

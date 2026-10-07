@@ -1,11 +1,10 @@
-CART RESET BY HYPERWUMPUS — CHROME 0.3.0
+CART RESET BY HYPERWUMPUS — CHROME 0.5.0
 
-See README.md for installation, usage, privacy and store support.
-Walmart only. Costco, other stores and Safari are not implemented yet.
+Walmart cart and Costco Same-Day cart drawer supported.
+Regular Costco.com, Amazon and Safari are not implemented.
+See README.md for current limitations and installation.
 
-The interface includes product thumbnails, bulk Save for later, bulk removal,
-and suggested Groceries / Other finds groups.
-Groups are temporary. Download grouped product links keeps a readable copy.
+Costco Same-Day: download a visual reminder list before bulk removal.
+Native Save for later is not available in this integration.
 
-UPDATE
-Reload Cart Reset on chrome://extensions, close the old panel, and reopen it.
+Reload the extension, close its old panel, then reopen it.

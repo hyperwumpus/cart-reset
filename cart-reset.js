@@ -1,12 +1,21 @@
 (() => {
   if (document.getElementById('cart-reset-host')) return;
-  if (location.hostname !== 'www.walmart.com' || !/^\/cart\/?$/.test(location.pathname)) {
-    alert('Open your Walmart cart at walmart.com/cart, then click Cart Reset.');
+  const isCostco = location.hostname === 'sameday.costco.com';
+  const supportedPage = () => isCostco
+    ? location.hostname === 'sameday.costco.com' && location.pathname.startsWith('/store/costco/')
+    : location.hostname === 'www.walmart.com' && /^\/cart\/?$/.test(location.pathname);
+  if (!supportedPage()) {
+    alert('Cart Reset supports Walmart.com/cart and Costco Same-Day in Chrome. Amazon and the regular Costco.com cart are not supported yet.');
+    return;
+  }
+  const cartDialog = isCostco ? document.querySelector('#cart_dialog[role="dialog"][aria-label="Cart"]') : null;
+  if (isCostco && (!cartDialog || !cartDialog.getClientRects().length)) {
+    alert('Open the cart drawer on Costco Same-Day, then click Cart Reset again.');
     return;
   }
   const host = document.createElement('div');
   host.id = 'cart-reset-host';
-  document.documentElement.append(host);
+  (cartDialog || document.documentElement).append(host);
   const root = host.attachShadow({mode: 'open'});
   root.innerHTML = `<style>
     :host{all:initial} *{box-sizing:border-box} aside{position:fixed;z-index:2147483647;right:18px;top:18px;bottom:18px;width:420px;max-width:calc(100vw - 36px);background:#faf8ff;color:#302440;border:1px solid #d6c9e8;border-radius:22px;box-shadow:0 12px 60px #35205f40;font:14px/1.4 system-ui;display:flex;flex-direction:column;padding:16px;gap:8px;overflow:hidden}
@@ -22,13 +31,52 @@
   const artworkURL = chrome.runtime.getURL('assets/cart-reset-background.jpeg');
   root.querySelector('aside').style.setProperty('--cart-art', `url("${artworkURL}")`);
   $('socials').src = artworkURL;
+  if (isCostco) {
+    root.querySelector('aside').style.left = '18px';
+    root.querySelector('aside').style.right = 'auto';
+    root.querySelector('aside > small').textContent = 'Costco Same-Day: download a visual reminder list before removing items. Native Save for later is not available here. Groups stay until this panel closes.';
+    $('later').hidden = true;
+    $('save').textContent = 'Download grouped reminder list';
+    $('stop').textContent = 'Stop after current quantity change';
+  }
   let items = [], running = false, stopped = false;
   const visible = el => !!el.getClientRects().length;
   const groups = ['Groceries', 'Other finds'];
   const assignedGroups = new Map();
-  const key = item => item.url + '\n' + item.name;
+  const key = item => (item.url || item.image || '') + '\n' + item.name;
   const checked = () => [...root.querySelectorAll('input:checked')].map(b => items[Number(b.dataset.index)]);
+  function scanCostco() {
+    const dialog = document.querySelector('#cart_dialog[role="dialog"][aria-label="Cart"]');
+    if (!dialog || !visible(dialog)) return [];
+    const result = [];
+    for (const increment of dialog.querySelectorAll('button[aria-label^="Increment quantity of "]')) {
+      const name = increment.getAttribute('aria-label').slice('Increment quantity of '.length);
+      let row = increment.parentElement;
+      while (row && row !== dialog && !(row.querySelector('h3') && row.querySelector('img'))) row = row.parentElement;
+      if (!row || row === dialog || row.querySelectorAll('h3').length !== 1 || !visible(row)) continue;
+      const controls = [...row.querySelectorAll('button[aria-label]')];
+      if (controls.filter(b => b.getAttribute('aria-label').startsWith('Increment quantity of ')).length !== 1) continue;
+      const imageElement = [...row.querySelectorAll('img')].find(i => i.alt === name);
+      const heading = row.querySelector('h3').textContent.trim();
+      if (!imageElement || !(heading === name || heading.startsWith(name + ' ('))) continue;
+      const quantityText = increment.parentElement.querySelector('[aria-live="polite"]')?.textContent.trim();
+      const quantityMatch = /^Quantity:\s*(\d+)\s+(ct|pkg)$/.exec(quantityText || '');
+      if (!quantityMatch) continue;
+      const quantity = Number(quantityMatch[1]);
+      if (quantity < 1 || quantity > 100) continue;
+      const button = controls.find(b => b.getAttribute('aria-label') === (quantity === 1 ? 'Remove ' : 'Decrement quantity of ') + name);
+      if (!button) continue;
+      const image = imageElement.src;
+      if (!image.startsWith('https://www.instacart.com/image-server/')) continue;
+      const item = {name, image, row, button, quantity, url: null, saveButton: null};
+      // Same-Day rows expose buttons rather than product permalinks; preserve names and thumbnails.
+      item.group = assignedGroups.get(key(item)) || (/detergent|soap|tissue|paper towel|cutlery|cleaner|shampoo|diaper/i.test(name) ? 'Other finds' : 'Groceries');
+      result.push(item);
+    }
+    return result;
+  }
   function scan() {
+    if (isCostco) return scanCostco();
     const result = [];
     // Walmart's cart uses named Remove controls inside LI rows, not cart-item test IDs.
     // Saved-for-later rows use "Remove:" and do not have quantity steppers.
@@ -58,7 +106,8 @@
     const count = checked().length;
     $('remove').textContent = `Remove selected (${count})`;
     $('later').textContent = `Save selected for later (${count})`;
-    $('remove').disabled = $('later').disabled = !count;
+    $('remove').disabled = !count;
+    $('later').disabled = isCostco || !count;
   }
   function render() {
     const selection = new Set(checked().map(key));
@@ -75,7 +124,9 @@
         const box = document.createElement('input'); box.type = 'checkbox'; box.dataset.index = items.indexOf(item); box.checked = selection.has(key(item));
         box.setAttribute('aria-label', `Select ${item.name}`); box.onchange = updateSelection;
         const content = document.createElement('div');
-        const link = document.createElement('a'); link.href = item.url; link.target = '_blank'; link.rel = 'noopener'; link.textContent = item.name;
+        const link = document.createElement(item.url ? 'a' : 'span');
+        if (item.url) { link.href = item.url; link.target = '_blank'; link.rel = 'noopener'; }
+        link.textContent = item.name + (isCostco ? ` · Qty ${item.quantity}` : '');
         const category = document.createElement('select'); category.setAttribute('aria-label', `Group for ${item.name}`);
         for (const value of groups) { const option = document.createElement('option'); option.value = option.textContent = value; category.append(option); }
         category.value = item.group;
@@ -86,19 +137,19 @@
         label.append(content); $('list').append(label);
       });
     }
-    $('status').textContent = items.length ? `${items.length} products found. Groups are suggestions; adjust the dropdowns.` : 'No cart rows found. Expand Walmart’s item sections and refresh items.';
+    $('status').textContent = items.length ? `${items.length} products found. Groups are suggestions; adjust the dropdowns.` : (isCostco ? 'No recognized rows. Keep the Costco Same-Day cart drawer open and refresh items.' : 'No cart rows found. Expand Walmart’s item sections and refresh items.');
     $('save').disabled = !items.length;
     $('all').disabled = $('none').disabled = !items.length;
     updateSelection();
   }
   function saveLinks() {
     const esc = value => value.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const body = groups.map(group => `<h2>${group}</h2><ul>${items.filter(i=>i.group===group).map(i=>`<li><a href="${esc(i.url)}">${esc(i.name)}</a></li>`).join('')}</ul>`).join('');
-    const blob = new Blob([`<!doctype html><html lang="en"><meta charset="utf-8"><title>My cart finds · HyperWumpus</title><style>body{font:18px/1.7 system-ui;max-width:800px;margin:40px auto;padding:20px}a{color:#56358b}</style><h1>My cart finds</h1><p>Cart Reset · A HyperWumpus creation</p><p>Saved ${new Date().toLocaleString()}. Product links only; this list cannot automatically restore a cart.</p>${body}</html>`], {type: 'text/html'});
+    const body = groups.map(group => `<h2>${group}</h2><ul>${items.filter(i=>i.group===group).map(i=>`<li>${i.image ? `<img src="${esc(i.image)}" alt="" width="64" height="64" style="object-fit:contain;vertical-align:middle;margin-right:12px">` : ''}${i.url ? `<a href="${esc(i.url)}">${esc(i.name)}</a>` : esc(i.name)}${i.quantity ? ` (Qty ${i.quantity})` : ''}</li>`).join('')}</ul>`).join('');
+    const blob = new Blob([`<!doctype html><html lang="en"><meta charset="utf-8"><title>My cart finds · HyperWumpus</title><style>body{font:18px/1.7 system-ui;max-width:800px;margin:40px auto;padding:20px}a{color:#56358b}</style><h1>My cart finds</h1><p>Cart Reset · A HyperWumpus creation</p><p>Saved ${new Date().toLocaleString()}. Visual reference only; this list cannot automatically restore a cart. Thumbnails load from the retailer’s image service when opened.</p>${body}</html>`], {type: 'text/html'});
     const url = URL.createObjectURL(blob); const a = document.createElement('a');
     a.href = url; a.download = `cart-finds-${new Date().toISOString().slice(0,10)}.html`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-    $('status').textContent = 'Product-link download requested. Check Chrome’s Downloads.';
+    $('status').textContent = 'Reminder-list download requested. Check Chrome’s Downloads before removing anything.';
   }
   $('close').onclick = () => { if (!running) host.remove(); };
   $('scan').onclick = render;
@@ -106,10 +157,45 @@
   $('none').onclick = () => { root.querySelectorAll('input').forEach(b => b.checked = false); updateSelection(); };
   $('save').onclick = saveLinks;
   $('stop').onclick = () => { stopped = true; $('status').textContent = 'Stopping after the current item…'; };
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+  function currentCostcoCart() {
+    if (!supportedPage()) throw new Error('The cart page changed.');
+    const dialog = document.querySelector('#cart_dialog[role="dialog"][aria-label="Cart"]');
+    if (!dialog || !visible(dialog)) throw new Error('The Costco cart drawer closed. Reopen it before continuing.');
+    if ([...document.querySelectorAll('[role="dialog"]')].some(d => d !== dialog && visible(d))) throw new Error('Costco opened another dialog. Review it before continuing.');
+    return dialog;
+  }
+  async function removeCostcoItem(item) {
+    // Quantity > 1 exposes a decrement, not a trash action. Verify each decrease before the next click.
+    let expected = item.quantity;
+    while (expected > 0) {
+      currentCostcoCart();
+      const matches = scanCostco().filter(x => key(x) === key(item));
+      if (matches.length !== 1 || matches[0].quantity !== expected) throw new Error('An item or quantity changed. Review the cart before continuing.');
+      if (matches[0].button.disabled) throw new Error('Costco is still updating. Try again when it finishes.');
+      matches[0].button.click();
+      let stable = 0, confirmed = false;
+      for (let n = 0; n < 60; n++) {
+        await delay(250);
+        const dialog = currentCostcoCart();
+        const now = scanCostco().filter(x => key(x) === key(item));
+        const rawPresent = [...dialog.querySelectorAll('button[aria-label]')].some(b => b.getAttribute('aria-label') === 'Increment quantity of ' + item.name);
+        const correct = expected === 1 ? !rawPresent : now.length === 1 && now[0].quantity === expected - 1;
+        stable = correct ? stable + 1 : 0;
+        if (stable >= 4) { confirmed = true; break; }
+      }
+      if (!confirmed) throw new Error('The quantity change could not be confirmed. Check the cart before continuing.');
+      expected--;
+      // Stop may leave a partially reduced quantity; no further clicks occur after it is requested.
+      if (stopped && expected > 0) throw new Error('Stopped after a quantity change; this product remains with a lower quantity.');
+      await delay(700);
+    }
+  }
   async function processSelected(action) {
     const selected = checked();
+    if (isCostco && action === 'later') return;
     if (!selected.length) { $('status').textContent = 'Select items to remove first.'; return; }
-    if (!confirm(action === 'later' ? `Move these ${selected.length} product rows to Walmart’s Saved for later?` : `Remove these ${selected.length} product rows? Save product links first if you want to remember them.`)) return;
+    if (!confirm(action === 'later' ? `Move these ${selected.length} product rows to Walmart’s Saved for later?` : `Remove these ${selected.length} product rows, including all their quantities? Download the reminder list first if you want to remember them.`)) return;
     running = true; stopped = false;
     root.querySelectorAll('button, input, select').forEach(b => b.disabled = true);
     $('stop').hidden = false; $('stop').disabled = false;
@@ -117,7 +203,8 @@
     try {
       for (const item of selected) {
         if (stopped) break;
-        if (location.hostname !== 'www.walmart.com' || !/^\/cart\/?$/.test(location.pathname)) throw new Error('The cart page changed.');
+        if (isCostco) { await removeCostcoItem(item); completed++; $('status').textContent = `${completed} of ${selected.length} products removed.`; continue; }
+        if (!supportedPage()) throw new Error('The cart page changed.');
         const matches = scan().filter(x => x.url === item.url && x.name === item.name);
         if (matches.length !== 1) throw new Error('An item changed or could not be identified uniquely.');
         const before = matches[0];
