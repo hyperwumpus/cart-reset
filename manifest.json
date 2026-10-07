@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Cart Reset by HyperWumpus",
+  "version": "0.3.0",
+  "description": "Keep the visual reminders. Lose the cart clutter. Group, save for later, and remove Walmart cart items in batches.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_title": "Cart Reset by HyperWumpus",
+    "default_icon": {
+      "16": "icons/wumpi-happy.png",
+      "32": "icons/wumpi-happy.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/wumpi-happy.png",
+    "32": "icons/wumpi-happy.png",
+    "48": "icons/wumpi-happy.png",
+    "128": "icons/wumpi-happy.png"
+  }
+}

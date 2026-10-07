@@ -1,5 +1,7 @@
 # Cart Reset by HyperWumpus
 
+<img src="icons/wumpi-happy.png" alt="Happy Wumpi with raised arms" width="220">
+
 **Keep the reminder. Lose the clutter.**
 
 Cart Reset is a Chrome extension for the moment your shopping cart becomes a collection of “ooh, that looks good,” “it’s on sale,” and “maybe I’ll buy it later.” Those products are useful visual reminders—until sorting a hundred of them becomes another chore.
@@ -83,11 +85,11 @@ For a live check, verify selection, group correction, cancellation, and one user
 - A verified Costco integration.
 - A persistent visual “maybe later” shelf and remembered groups.
 - More categories and a quick review mode.
-- Wumpi artwork and more HyperWumpus details.
+- More Wumpi expressions and HyperWumpus details.
 - Safari packaging after the Chrome flow is reliable.
 
 ## Signature
 
-Purple, lime, a playful W mark, and **A HyperWumpus creation**. The geometric mark in this repository is an original project mark, not a representation of an existing Wumpi asset.
+Purple, lime, your pixel-art Wumpi, and **A HyperWumpus creation**. The happy raised-arms Wumpi was isolated from the creator-supplied sprite sheet for this project. The original geometric W study is retained in `icons/` as an unused alternative.
 
 Independent project. Not affiliated with Walmart or Costco.
