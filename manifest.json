@@ -22,5 +22,15 @@
     "32": "icons/wumpi-happy.png",
     "48": "icons/wumpi-happy.png",
     "128": "icons/wumpi-happy.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/wumpi-happy.png"
+      ],
+      "matches": [
+        "https://www.walmart.com/*"
+      ]
+    }
+  ]
 }
