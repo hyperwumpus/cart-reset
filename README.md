@@ -1,6 +1,6 @@
 # Cart Reset by HyperWumpus
 
-<img src="icons/wumpi-happy.png" alt="Happy Wumpi with raised arms" width="220">
+<img src="assets/cart-reset-background.jpeg" alt="Cart Reset — @HyperWumpus" width="420">
 
 **Keep the reminder. Lose the clutter.**
 
@@ -90,6 +90,6 @@ For a live check, verify selection, group correction, cancellation, and one user
 
 ## Signature
 
-Purple, lime, your pixel-art Wumpi, and **A HyperWumpus creation**. The happy raised-arms Wumpi was isolated from the creator-supplied sprite sheet for this project. The original geometric W study is retained in `icons/` as an unused alternative.
+Creator-supplied Cart Reset artwork forms the panel background and visible social signature. A transparent Wumpi pushing a cart is used for the extension icon and panel mascot. Earlier mascot studies remain in `icons/`. Social platform marks identify the creator’s presence; no profile links are inferred.
 
 Independent project. Not affiliated with Walmart or Costco.
